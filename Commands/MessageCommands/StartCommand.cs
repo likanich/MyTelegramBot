@@ -24,7 +24,7 @@ namespace MyTelegramBot.Commands.MessageCommands
             try
             {
                 var shoppingLists = context.ShoppingLists.Where(p => p.UserId == chatId);
-                if (shoppingLists.Count() == 0)
+                if (!shoppingLists.Any())
                 {
                     var shoppingList = new ShoppingList { ListName = _defaultListName, UserId = message.From.Id, IsSelected = true };
 
