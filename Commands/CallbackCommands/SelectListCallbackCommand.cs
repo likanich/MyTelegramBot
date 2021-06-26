@@ -9,7 +9,7 @@ using Telegram.Bot.Types;
 
 namespace MyTelegramBot.Commands.CallbackCommands
 {
-    class SelectListCallbackCommand : CallbackCommand
+    internal class SelectListCallbackCommand : CallbackCommand
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         public override string Name => @"$select_list";

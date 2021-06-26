@@ -3,6 +3,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MyTelegramBot.Entities
 {
+    /// <summary>
+    /// Shopping list class
+    /// </summary>
     class ShoppingList
     {
         [Key]

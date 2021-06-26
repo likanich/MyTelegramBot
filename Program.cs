@@ -5,9 +5,13 @@ using System.Threading;
 
 namespace MyTelegramBot
 {
+    /// <summary>
+    /// Main class for run Telegram bot
+    /// </summary>
     class Program
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
         static void Main(string[] args)
         {
             var cts = new CancellationTokenSource();

@@ -14,6 +14,10 @@ using NLog;
 
 namespace MyTelegramBot.Entities
 {
+    /// <summary>
+    /// The bot class
+    /// Contains all methods to get messages from telegram
+    /// </summary>
     public static class Bot
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
@@ -25,6 +29,11 @@ namespace MyTelegramBot.Entities
         public static IReadOnlyList<MessageCommand> Commands => commandsList.AsReadOnly();
         public static IReadOnlyList<CallbackCommand> CallbackCommands => callbackCommandsList.AsReadOnly();
 
+        /// <summary>
+        /// Returns an object <c>TelegramBotClient</c> or creates a new one if it hasn't been created yet
+        /// </summary>
+        /// <param name="cancellationToken">Propagates notification that operations should be canceled</param>
+        /// <returns>Telegram bot client</returns>
         public static async Task<TelegramBotClient> GetBotClientAsync(CancellationToken cancellationToken)
         {
             if (botClient != null)
@@ -58,6 +67,13 @@ namespace MyTelegramBot.Entities
             return botClient;
         }
 
+        /// <summary>
+        /// Adds methods to receive different types of messages
+        /// </summary>
+        /// <param name="botClient">A client to use Telegram bot API</param>
+        /// <param name="update">Incoming update</param>
+        /// <param name="cancellationToken">Propagates notification that operations should be canceled</param>
+        /// <returns></returns>
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var handler = update.Type switch
