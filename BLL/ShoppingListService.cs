@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using MyTelegramBot.DAL;
+﻿using MyTelegramBot.DAL;
 using MyTelegramBot.Entities;
 using System.Collections.Generic;
 using System.Linq;
@@ -184,17 +183,11 @@ namespace MyTelegramBot.BLL
             var item = shoppingList.Items[itemNumber - 1];
             item.IsBought = true;
             _itemRepository.Update(item);
-            try
-            {
-                if (_itemRepository.Save() > 0)
-                    return item.ItemName;
-                else
-                    throw new CommandException("Not saved to database");
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new CommandException(ex.InnerException.Message);
-            }
+
+            if (_itemRepository.Save() > 0)
+                return item.ItemName;
+            else
+                throw new CommandException("Not saved to database");
         }
 
         public string DeleteItem(long chatId, int itemNumber)
