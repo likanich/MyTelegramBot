@@ -10,6 +10,12 @@ namespace MyTelegramBot.Commands.CallbackCommands
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private readonly ShoppingListService _shoppingListService;
+
+        public SelectListCallbackCommand(ShoppingListService shoppingListService)
+        {
+            _shoppingListService = shoppingListService;
+        }
+
         public override string Name => @"$select_list";
 
         public override async Task Execute(string message, long chatId, TelegramBotClient client)
