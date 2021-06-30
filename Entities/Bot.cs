@@ -1,5 +1,10 @@
-﻿using MyTelegramBot.Commands.MessageCommands;
+﻿using MyTelegramBot.BLL;
+using MyTelegramBot.Commands;
 using MyTelegramBot.Commands.CallbackCommands;
+using MyTelegramBot.Commands.MessageCommands;
+using MyTelegramBot.Context;
+using MyTelegramBot.DAL;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -9,8 +14,6 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using MyTelegramBot.Commands;
-using NLog;
 
 namespace MyTelegramBot.Entities
 {
@@ -22,49 +25,54 @@ namespace MyTelegramBot.Entities
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        private static TelegramBotClient botClient;
-        private static List<MessageCommand> commandsList;
-        private static List<CallbackCommand> callbackCommandsList;
+        private static MyTelegramBotClient _botClient;
+        private static List<MessageCommand> _commandsList;
+        private static List<CallbackCommand> _callbackCommandsList;
 
-        public static IReadOnlyList<MessageCommand> Commands => commandsList.AsReadOnly();
-        public static IReadOnlyList<CallbackCommand> CallbackCommands => callbackCommandsList.AsReadOnly();
+        private static readonly ApplicationContext _applicationContext = new();
+        private static readonly ShoppingListService _shoppingListService = new(new ShoppingListRepository(_applicationContext), new ItemRepository(_applicationContext));
+
+        internal static ShoppingListService ShoppingListService => _shoppingListService;
 
         /// <summary>
         /// Returns an object <c>TelegramBotClient</c> or creates a new one if it hasn't been created yet
         /// </summary>
-        /// <param name="cancellationToken">Propagates notification that operations should be canceled</param>
         /// <returns>Telegram bot client</returns>
-        public static async Task<TelegramBotClient> GetBotClientAsync(CancellationToken cancellationToken)
+        public static ITelegramBotClient GetBotClient()
         {
-            if (botClient != null)
+            if (_botClient != null)
             {
-                return botClient;
+                return _botClient;
             }
 
-            commandsList = new List<MessageCommand>
+            _commandsList = new List<MessageCommand>
             {
-                new StartCommand(),
-                new AddListCommand(),
-                new SelectListCommand(),
-                new ShowCommand(),
-                new BuyCommand(),
-                new DeleteItemCommand(),
-                new ClearListCommand(),
-                new BoughtAllCommand(),
-                new UnitedListCommand(),
-                new DeleteListCommand(),
-                new RenameListCommand()
+                new StartCommand(_shoppingListService),
+                new AddListCommand(_shoppingListService),
+                new SelectListCommand(_shoppingListService),
+                new ShowCommand(_shoppingListService),
+                new BuyCommand(_shoppingListService),
+                new DeleteItemCommand(_shoppingListService),
+                new ClearListCommand(_shoppingListService),
+                new BoughtAllCommand(_shoppingListService),
+                new UnitedListCommand(_shoppingListService),
+                new DeleteListCommand(_shoppingListService),
+                new RenameListCommand(_shoppingListService)
             };
 
-            callbackCommandsList = new List<CallbackCommand>
+            _callbackCommandsList = new List<CallbackCommand>
             {
-                new SelectListCallbackCommand()
+                new SelectListCallbackCommand(_shoppingListService)
             };
 
-            botClient = new TelegramBotClient(Settings.Key);
+            _botClient = new MyTelegramBotClient(Settings.Key);
 
-            botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cancellationToken);
-            return botClient;
+            return _botClient;
+        }
+
+        public static DefaultUpdateHandler GetUpdateHandler()
+        {
+            return new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync);
         }
 
         /// <summary>
@@ -74,7 +82,7 @@ namespace MyTelegramBot.Entities
         /// <param name="update">Incoming update</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled</param>
         /// <returns></returns>
-        public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+        private static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var handler = update.Type switch
             {
@@ -109,14 +117,21 @@ namespace MyTelegramBot.Entities
                 return;
             }
 
-            foreach (var command in Bot.CallbackCommands)
+            if (SetBotCallbackCommand(callbackQuery))
+                _botClient.RunCommand(callbackQuery.Data, message.Chat.Id);
+        }
+
+        private static bool SetBotCallbackCommand(CallbackQuery callbackQuery)
+        {
+            foreach (var command in _callbackCommandsList)
             {
                 if (command.Contains(callbackQuery))
                 {
-                    await command.Execute(callbackQuery, botClient);
-                    return;
+                    _botClient.Command = command;
+                    return true;
                 }
             }
+            return false;
         }
 
         private static async Task BotOnMessageReceived(Message message)
@@ -128,27 +143,32 @@ namespace MyTelegramBot.Entities
                 return;
             }
 
-            var commands = Bot.Commands;
+            SetBotMessageCommand(message);
+            _botClient.RunCommand(message.Text, message.Chat.Id);
+        }
+
+        private static void SetBotMessageCommand(Message message)
+        {
             if (message.ReplyMarkup != null)
             {
-                foreach (var command in commands)
+                foreach (var command in _commandsList)
                 {
                     if (command is IReplyCommand && command.Contains(message))
                     {
-                        await command.Execute(message, botClient);
+                        _botClient.Command = command;
                         return;
                     }
                 }
             }
-            foreach (var command in commands)
+            foreach (var command in _commandsList)
             {
                 if (command.Contains(message))
                 {
-                    await command.Execute(message, botClient);
+                    _botClient.Command = command;
                     return;
                 }
             }
-            _ = new AddItemCommand().Execute(message, botClient);
+            _botClient.Command = new AddItemCommand(_shoppingListService);
         }
 
         private static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
