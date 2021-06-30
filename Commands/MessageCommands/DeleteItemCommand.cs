@@ -26,7 +26,7 @@ namespace MyTelegramBot.Commands.MessageCommands
             {
                 int itemNumber = ParseItemNumber(message);
                 var itemName = _shoppingListService.DeleteItem(chatId, itemNumber);
-                await client.SendTextMessageAsync(chatId, $"{itemName} is bought");
+                await client.SendTextMessageAsync(chatId, $"{itemName} is delete");
                 _logger.Info($"Item {itemName} is delete. Chat id: {chatId}");
                 
             }

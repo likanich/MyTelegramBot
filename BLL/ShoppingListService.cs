@@ -1,4 +1,5 @@
-﻿using MyTelegramBot.DAL;
+﻿using Microsoft.EntityFrameworkCore;
+using MyTelegramBot.DAL;
 using MyTelegramBot.Entities;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +70,10 @@ namespace MyTelegramBot.BLL
         public string Select(long chatId)
         {
             var shoppingList = _shoppingListRepository.GetAll(chatId).FirstOrDefault();
+            if (shoppingList == null)
+            {
+                throw new CommandException("Not found shopping list");
+            }
             shoppingList.IsSelected = true;
             var listName = shoppingList.ListName;
             _shoppingListRepository.Update(shoppingList);
@@ -135,12 +140,12 @@ namespace MyTelegramBot.BLL
             var shoppingList = Get(chatId);
             Item item = new()
             {
-                ShoppingList = shoppingList,
+                ShoppingListId = shoppingList.ListId,
                 ItemName = itemName
             };
             _itemRepository.Add(item);
             if (_itemRepository.Save() > 0)
-                return item.ItemName;
+                return shoppingList.ListName;
             else
                 throw new CommandException("Not saved to database");
         }
@@ -179,10 +184,17 @@ namespace MyTelegramBot.BLL
             var item = shoppingList.Items[itemNumber - 1];
             item.IsBought = true;
             _itemRepository.Update(item);
-            if (_itemRepository.Save() > 0)
-                return shoppingList.ListName;
-            else
-                throw new CommandException("Not saved to database");
+            try
+            {
+                if (_itemRepository.Save() > 0)
+                    return item.ItemName;
+                else
+                    throw new CommandException("Not saved to database");
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new CommandException(ex.InnerException.Message);
+            }
         }
 
         public string DeleteItem(long chatId, int itemNumber)
@@ -200,7 +212,7 @@ namespace MyTelegramBot.BLL
             var item = shoppingList.Items[itemNumber - 1];
             _itemRepository.Delete(item);
             if (_itemRepository.Save() > 0)
-                return shoppingList.ListName;
+                return item.ItemName;
             else
                 throw new CommandException("Not saved to database");
         }
