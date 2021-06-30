@@ -2,6 +2,9 @@
 using NLog;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
+using Telegram.Bot;
+using Telegram.Bot.Extensions.Polling;
 
 namespace MyTelegramBot
 {
@@ -11,17 +14,22 @@ namespace MyTelegramBot
     class Program
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        private static ITelegramBotClient _telegramBot;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
+            _telegramBot = Bot.GetBotClient();
+
+            var me = await _telegramBot.GetMeAsync();
+            Console.Title = me.Username;
+
             var cts = new CancellationTokenSource();
 
-            Bot.GetBotClientAsync(cts.Token).Wait();
-            _logger.Info("Telegram bot for shopping list started");
+            _telegramBot.StartReceiving(Bot.GetUpdateHandler(), cts.Token);
+            _logger.Info($"Start listening for @{me.Username}");
+            Console.ReadLine();
 
-            Console.WriteLine("Press any key to exit");
-            Console.ReadKey();
-
+            // Send cancellation request to stop bot
             cts.Cancel();
             _logger.Warn("Telegram bot for shopping list stopped");
         }
