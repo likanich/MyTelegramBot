@@ -3,12 +3,12 @@ using MyTelegramBot.Entities;
 
 namespace MyTelegramBot.Context
 {
-    class ShoppingListContext : DbContext
+    class ApplicationContext : DbContext
     {
         public DbSet<ShoppingList> ShoppingLists { get; set; }
         public DbSet<Item> Items { get; set; }
 
-        public ShoppingListContext()
+        public ApplicationContext()
         {
             Database.EnsureCreated();
         }
